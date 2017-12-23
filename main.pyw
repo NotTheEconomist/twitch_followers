@@ -9,6 +9,7 @@ HEIGHT = 410
 
 
 class App(tk.Tk):
+    """App is little more than a GUI wrapper around the API"""
 
     # time in ms between runs
     TICK = 1000  # 1s
@@ -58,6 +59,7 @@ class App(tk.Tk):
 
     @property
     def new_followers_output(self):
+        """Pretty output of new_followers"""
         if not self.new_followers:
             return ''
         return "\n".join([f.name for f in sorted(self.new_followers)])
@@ -70,27 +72,32 @@ class App(tk.Tk):
         for follower in self.followers:
             print(follower.name, follower.new)
 
-    def get_followers(self, channel_name=None):
-        if channel_name is None:
-            channel_name = self.channel_name
-        return api.get_followers(channel_name)
+    def get_followers(self):
+        return api.get_followers(self.channel_name)
 
     def clear_new_followers(self):
         for follower in self.followers:
             follower.see()
 
     def tick(self):
+        # Re-run after self.TICK ms
         self.after(self.TICK, self.tick)
-        self.viewers.set(api.get_viewers(self.channel_name))
+
+        # Update self.followers with results of API calls to Twitch
         existing = self.followers
         updated = self.get_followers()
-        new = updated - existing
-        lost = existing - updated
+        new = updated - existing  # set difference here showing only new followers
+        lost = existing - updated  # set defference here showing followers that unfollowed
         for follower in lost:
             self.followers.remove(follower)
         self.followers.update(new)
+
+        # Update the GUI labels with new output
+        self.viewers.set(api.get_viewers(self.channel_name))
         self.new_box.configure(text=self.new_followers_output)
         self.label_num_followers.configure(text=self.num_followers)
+
+        # If you have new followers: push the info to your pushbullet device
         if new:
             title = "New Followers:"
             body = "\n".join([follower.name for follower in new])
